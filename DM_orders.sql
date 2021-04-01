@@ -2,7 +2,7 @@
 
 -----------------------------------------------------------------------------------------------------ORDERS----------------------------------------------------------------------------------------------------
 
-create or replace table "risk_view" as 
+create or replace table "orders" as 
 select distinct CURRENT_DATE() as "rep_date",
        ord."id" as "order_ID",
        ord."customer_id" as "cust_ID",
@@ -359,5 +359,4 @@ left join "predator-precheck" as prch on try_to_number(valset1."precheck_id") = 
 left join "commerce-eshop" as eshp_o on ord."eshop_id" = eshp_o."id"
 left join "commerce-eshop" as eshp_p on prch."eshop_id" = eshp_p."id"
 left join "cb_validatorconfig_fail" as valfail on valfail."failed_action" = val1."fail_action"
-where (ord."eshop_id" <> '1' or ord."eshop_id" is null) and (prch."eshop_id" <> '1' or prch."eshop_id" is null)
-;
+where (ord."eshop_id" <> '1' or ord."eshop_id" is null) and (prch."eshop_id" <> '1' or prch."eshop_id" is null);
