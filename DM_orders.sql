@@ -1,6 +1,6 @@
---------------------------------------------------------------------------------------------------SAMPLE SCRIPT -------------------------------------------------------------------------------------------------------
+--------------------------------------------------------------SAMPLE SCRIPT -----------------------------------------------------------------------------------------------
 
------------------------------------------------------------------------------------------------------ORDERS----------------------------------------------------------------------------------------------------
+-------------------------------------------------------ORDERS BASED ON ORDERS TABLE-------------------------------------------------------------------------------------------
 
 create or replace table "orders" as 
 select distinct CURRENT_DATE() as "rep_date",
@@ -180,13 +180,13 @@ select distinct CURRENT_DATE() as "rep_date",
        
 from "commerce-order" as ord
 left join "customers-customer" as cust on ord."customer_id" = cust."user_ptr_id"
--- eshops names
+-------------------------------------------------------------ESHOP NAMES--------------------------------------------------------------------------------------------
 left join "commerce-eshop" as eshp on ord."eshop_id" = eshp."id"
--- billing address from order
+-----------------------------------------------------------BILLING ADDRESS----------------------------------------------------------------------------------------------
 left join "commerce-orderaddress" as ba on ord."id" = ba."order_id" and ba."type" = 1
--- delivery address from order
+----------------------------------------------------------DELIVERY ADDRESS--------------------------------------------------------------------------------------------
 left join "commerce-orderaddress" as da on ord."id" = da."order_id" and da."type" = 2
--- eshop extra data
+---------------------------------------------------------ESHOP EXTRA DATA--------------------------------------------------------------------------------------------
 left join 
     (select extr."customer_id",
             case
@@ -202,7 +202,7 @@ left join
     where contains(extr."data", 'latest_transaction')
     group by extr."customer_id") as extr2
 on ord."customer_id" = extr2."customer_id"
--- items
+-----------------------------------------------------------------ITEMS----------------------------------------------------------------------------------------------------
 left join
     (select distinct itm."order_id",
             count(itm."id") over(partition by itm."order_id") as "items_count",
@@ -213,9 +213,9 @@ left join
      where not(regexp_like(itm."code", '([0-9]{5})|([0-9]{2})|(.DAR.*)|(.AKCE.*)|(.*KUPNAJISTO.*)|(.*LYMET.*)|(.*kupnajisto.*)|(.*lymet.*)|(S2P.*)|(.*MALL.*)')
         or itm."code" in ('POSTOVNE', 'POJISTNE', 'DOPRAVA', 'S2OSOBNE', 'SLEVA', 'DELIVERY', 'BALNE', 'PRIPLATKY', '110054'))) as item
 on ord."id" = item."order_id"
--- credit and fraud score
+---------------------------------------------------------CREDIT & FRAUD SCORE--------------------------------------------------------------------------------------------
 left join "customers-customercreditbonus" as scr on ord."customer_id" = scr."customer_id"
--- telco score
+-----------------------------------------------------------TELCO SCORE----------------------------------------------------------------------------------------------
 left join
     (select ts1."order_id",
             case
@@ -228,7 +228,7 @@ left join
      left join "predator-validatorresult" as ts2 on ts1."id" = ts2."validator_set_result_id"
      where is_decimal(try_to_decimal(ts1."order_id")) and ts1."state"<>5 and ts2."validator_slug" like 'phone-04' and ts2."validator_config_id" in ('91','92')) as telscr
 on ord."id" = telscr."order_id"
--- GeoApply
+-----------------------------------------------------------------GEO APPLY----------------------------------------------------------------------------------------------------
 left join
     (select distinct gs1."order_id",
             ifnull(to_varchar(parse_json(gs2."computed_attrs"): "geoapply_response"."geo_segmentation"), to_varchar(parse_json(gs2."computed_attrs"): "geo_apply_response"."geo_segmentation")) as "geo_segment",
@@ -240,42 +240,42 @@ left join
      left join "predator-validatorresult" as gs2 on gs1."id" = gs2."validator_set_result_id"
      where is_decimal(try_to_decimal(gs1."order_id")) and gs1."state"<>5 and gs2."result"<>'8' and gs2."validator_slug" like 'address-06'and gs2."computed_attrs" not like '{}') as geoscr
 on ord."id" = geoscr."order_id"
--- validator set result - CUSTOMER_CREATED
+-------------------------------------------------------VALIDATOR SET RESULT CUSTOMER_CREATED------------------------------------------------------------------------------------------
 left join 
     (select vs1."order_id", vsr1."state_desc_EN"
      from "predator-validatorsetresult" as vs1
      left join "cb_validatorset_result" as vsr1 on vs1."state" = vsr1."state"
      where vs1."validator_set_slug" = 'CUSTOMER_CREATED' and is_decimal(try_to_decimal(vs1."order_id")) and vs1."state"<>5) as valset1
 on ord."id" = valset1."order_id"
--- validator set result - FIRST_ORDER_APPROVING
+-----------------------------------------------------VALIDATOR SET RESULT FIRST_ORDER_APPROVING----------------------------------------------------------------------------------------
 left join 
     (select vs2."order_id", vsr2."state_desc_EN"
      from "predator-validatorsetresult" as vs2
      left join "cb_validatorset_result" as vsr2 on vs2."state" = vsr2."state"
      where vs2."validator_set_slug" = 'FIRST_ORDER_APPROVING' and is_decimal(try_to_decimal(vs2."order_id")) and vs2."state"<>5) as valset2
 on ord."id" = valset2."order_id"
--- validator set result - SECOND_ORDER_APPROVING
+----------------------------------------------------VALIDATOR SET RESULT SECOND_ORDER_APPROVING----------------------------------------------------------------------------------------
 left join 
     (select vs3."order_id", vsr3."state_desc_EN"
      from "predator-validatorsetresult" as vs3
      left join "cb_validatorset_result" as vsr3 on vs3."state" = vsr3."state"
      where vs3."validator_set_slug" = 'SECOND_ORDER_APPROVING' and is_decimal(try_to_decimal(vs3."order_id")) and vs3."state"<>5) as valset3
 on ord."id" = valset3."order_id"
--- validator set result - ADDED_ID_CARD_DATA
+----------------------------------------------------VALIDATOR SET RESULT ADDED ID_CARD_DATA----------------------------------------------------------------------------------------
 left join 
     (select vs4."order_id", vsr4."state_desc_EN"
      from "predator-validatorsetresult" as vs4
      left join "cb_validatorset_result" as vsr4 on vs4."state" = vsr4."state"
      where vs4."validator_set_slug" = 'ADDED_ID_CARD_DATA' and is_decimal(try_to_decimal(vs4."order_id")) and vs4."state"<>5) as valset4
 on ord."id" = valset4."order_id"
--- validator set result - ADDED_PERSONAL_ID
+----------------------------------------------------VALIDATOR SET RESULT ADDED PERSONAL_ID----------------------------------------------------------------------------------------
 left join 
     (select vs5."order_id", vsr5."state_desc_EN"
      from "predator-validatorsetresult" as vs5
      left join "cb_validatorset_result" as vsr5 on vs5."state" = vsr5."state"
      where vs5."validator_set_slug" = 'ADDED_PERSONAL_ID' and is_decimal(try_to_decimal(vs5."order_id")) and vs5."state"<>5) as valset5
 on ord."id" = valset5."order_id"
--- points and limit at the time of the order
+----------------------------------------------------POINTS AND LIMIT AT THE TIME OF ORDER----------------------------------------------------------------------------------------
 left join
     (select distinct
             pts2."customer_id",
@@ -289,33 +289,34 @@ left join
           from "customers-pointschange" as pts1) as pts2
      left join "customers-pointschange" as pts3 on pts2."customer_id" = pts3."customer_id" and pts2."MAX_ID" = pts3."id") as pts
 on ord."customer_id" = pts."customer_id" and try_cast(ord."created_at" as DATE) = pts."CREATED_DATE"
--- migration from HC
+----------------------------------------------------MIGRATED CUSTOMERS FROM HC----------------------------------------------------------------------------------------
 left join
     (select mig1."customer_id", '1' as "migrated_from_HC"
      from "customers-pointschange" as mig1
      where mig1."description" like 'Migrace zákazníka ze staré aplikace HC Lymet') as mig2
 on ord."customer_id" = mig2."customer_id"
--- Footprint and Social Leaks
+----------------------------------------------------FOOT PRINTS AND SOCIAL LEAKS----------------------------------------------------------------------------------------
 left join
     (select f1."id" as "fingerprint_id", f1."value" as "footprint", f2.*
        from "fingerprint-computedfingerprint" as f1
   left join "fingerprint-fingerprintdata" as f2 on f2."id" = f1."source_data_id") as fp
 on try_cast(ord."fingerprint_id" as number) = fp."fingerprint_id"
  
--- order state description
+----------------------------------------------------ORDER STATE DESCRIPTION----------------------------------------------------------------------------------------
 left join "cb_order_state" as cb_ord_state on ord."state" = cb_ord_state."state"
--- order state reason description
+----------------------------------------------------ORDER STATE REASON DESCRIPTION----------------------------------------------------------------------------------------
 left join "cb_order_state_reason" as cb_ord_state_reason on ord."state_reason" = cb_ord_state_reason."state_reason"
--- delivery type description
---left join "cb_delivery_type" as cb_deliv_type on ord."delivery_type" = cb_deliv_type."delivery_type"
--- delivery carrier description
---left join "cb_delivery_carrier" as cb_deliv_carrier on ord."delivery_carrier" = cb_deliv_carrier."delivery_carrier"
--- debt state description
+
+----------------------------------------------------DEBT STATE DESCRIPTION----------------------------------------------------------------------------------------
+
 left join "cb_debt_state" as cb_debt_state on ord."debt_state" = cb_debt_state."debt_state"
 where ord."eshop_id"<>'1';
-*/
--- Validators view based on table predator-validatorresult ---------------------------------------------------------------------------
-create or replace table "risk_validators" as
+
+
+
+
+----------------------------------------------------VALIDATORS VIEW BASED ON VALIDATORS----------------------------------------------------------------------------------------
+create or replace table "order_validators" as
 select CURRENT_DATE() as "rep_date",
    case
          when is_decimal(try_to_decimal(valset1."order_id")) then eshp_o."name"
@@ -359,4 +360,5 @@ left join "predator-precheck" as prch on try_to_number(valset1."precheck_id") = 
 left join "commerce-eshop" as eshp_o on ord."eshop_id" = eshp_o."id"
 left join "commerce-eshop" as eshp_p on prch."eshop_id" = eshp_p."id"
 left join "cb_validatorconfig_fail" as valfail on valfail."failed_action" = val1."fail_action"
-where (ord."eshop_id" <> '1' or ord."eshop_id" is null) and (prch."eshop_id" <> '1' or prch."eshop_id" is null);
+where (ord."eshop_id" <> '1' or ord."eshop_id" is null) and (prch."eshop_id" <> '1' or prch."eshop_id" is null)
+;
